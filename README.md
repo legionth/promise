@@ -16,21 +16,9 @@ Table of Contents
 
 1. [Introduction](#introduction)
 2. [Concepts](#concepts)
-   * [Deferred](#deferred)
    * [Promise](#promise)
+   * [Deferred](#deferred)
 3. [API](#api)
-   * [Deferred](#deferred-1)
-     * [Deferred::promise()](#deferredpromise)
-     * [Deferred::resolve()](#deferredresolve)
-     * [Deferred::reject()](#deferredreject)
-   * [PromiseInterface](#promiseinterface)
-     * [PromiseInterface::then()](#promiseinterfacethen)
-   * [ExtendedPromiseInterface](#extendedpromiseinterface)
-        * [ExtendedPromiseInterface::done()](#extendedpromiseinterfacedone)
-        * [ExtendedPromiseInterface::otherwise()](#extendedpromiseinterfaceotherwise)
-        * [ExtendedPromiseInterface::always()](#extendedpromiseinterfacealways)
-   * [CancellablePromiseInterface](#cancellablepromiseinterface)
-        * [CancellablePromiseInterface::cancel()](#cancellablepromiseinterfacecancel)
    * [Promise](#promise-1)
    * [FulfilledPromise](#fulfilledpromise)
    * [RejectedPromise](#rejectedpromise)
@@ -44,6 +32,18 @@ Table of Contents
      * [some()](#some)
      * [map()](#map)
      * [reduce()](#reduce)
+   * [Deferred](#deferred-1)
+     * [Deferred::promise()](#deferredpromise)
+     * [Deferred::resolve()](#deferredresolve)
+     * [Deferred::reject()](#deferredreject)
+   * [PromiseInterface](#promiseinterface)
+     * [PromiseInterface::then()](#promiseinterfacethen)
+   * [ExtendedPromiseInterface](#extendedpromiseinterface)
+        * [ExtendedPromiseInterface::done()](#extendedpromiseinterfacedone)
+        * [ExtendedPromiseInterface::otherwise()](#extendedpromiseinterfaceotherwise)
+        * [ExtendedPromiseInterface::always()](#extendedpromiseinterfacealways)
+   * [CancellablePromiseInterface](#cancellablepromiseinterface)
+        * [CancellablePromiseInterface::cancel()](#cancellablepromiseinterfacecancel)
    * [PromisorInterface](#promisorinterface)
 4. [Examples](#examples)
    * [How to use Deferred](#how-to-use-deferred)
@@ -60,7 +60,19 @@ Introduction
 
 React/Promise is a library implementing
 [CommonJS Promises/A](http://wiki.commonjs.org/wiki/Promises/A) for PHP.
-
+   * [Promise](#promise-1)
+   * [FulfilledPromise](#fulfilledpromise)
+   * [RejectedPromise](#rejectedpromise)
+   * [LazyPromise](#lazypromise)
+   * [Functions](#functions)
+     * [resolve()](#resolve)
+     * [reject()](#reject)
+     * [all()](#all)
+     * [race()](#race)
+     * [any()](#any)
+     * [some()](#some)
+     * [map()](#map)
+     * [reduce()](#reduce)
 It also provides several other useful promise-related concepts, such as joining
 multiple promises and mapping and reducing collections of promises.
 
@@ -69,78 +81,6 @@ If you've never heard about promises before,
 
 Concepts
 --------
-
-### Deferred
-
-A **Deferred** represents a computation or unit of work that may not have
-completed yet. Typically (but not always), that computation will be something
-that executes asynchronously and completes at some point in the future.
-
-### Promise
-
-While a deferred represents the computation itself, a **Promise** represents
-the result of that computation. Thus, each deferred has a promise that acts as
-a placeholder for its actual result.
-
-API
----
-
-### Deferred
-
-A deferred represents an operation whose resolution is pending. It has separate
-promise and resolver parts.
-
-```php
-$deferred = new React\Promise\Deferred();
-
-$promise = $deferred->promise();
-
-$deferred->resolve(mixed $value = null);
-$deferred->reject(mixed $reason = null);
-```
-
-The `promise` method returns the promise of the deferred.
-
-The `resolve` and `reject` methods control the state of the deferred.
-
-The constructor of the `Deferred` accepts an optional `$canceller` argument.
-See [Promise](#promise-1) for more information.
-
-#### Deferred::promise()
-
-```php
-$promise = $deferred->promise();
-```
-
-Returns the promise of the deferred, which you can hand out to others while
-keeping the authority to modify its state to yourself.
-
-#### Deferred::resolve()
-
-```php
-$deferred->resolve(mixed $value = null);
-```
-
-Resolves the promise returned by `promise()`. All consumers are notified by
-having `$onFulfilled` (which they registered via `$promise->then()`) called with
-`$value`.
-
-If `$value` itself is a promise, the promise will transition to the state of
-this promise once it is resolved.
-
-#### Deferred::reject()
-
-```php
-$deferred->reject(mixed $reason = null);
-```
-
-Rejects the promise returned by `promise()`, signalling that the deferred's
-computation failed.
-All consumers are notified by having `$onRejected` (which they registered via
-`$promise->then()`) called with `$reason`.
-
-If `$reason` itself is a promise, the promise will be rejected with the outcome
-of this promise regardless whether it fulfills or rejects.
 
 ### PromiseInterface
 
@@ -196,146 +136,31 @@ the same call to `then()`:
 * [ExtendedPromiseInterface::done()](#extendedpromiseinterfacedone)
 * [done() vs. then()](#done-vs-then)
 
-### ExtendedPromiseInterface
+### Promise
 
-The ExtendedPromiseInterface extends the PromiseInterface with useful shortcut
-and utility methods which are not part of the Promises/A specification.
+A **Promise** represents the result of a computation. 
+Thus, each deferred has a promise that acts as
+a placeholder for its actual result.
 
-#### Implementations
+### Deferred
 
-* [Promise](#promise-1)
-* [FulfilledPromise](#fulfilledpromise)
-* [RejectedPromise](#rejectedpromise)
-* [LazyPromise](#lazypromise)
+A **Deferred** represents a computation or unit of work that may not have
+completed yet. Typically (but not always), that computation will be something
+that executes asynchronously and completes at some point in the future.
 
-#### ExtendedPromiseInterface::done()
-
-```php
-$promise->done(callable $onFulfilled = null, callable $onRejected = null);
-```
-
-Consumes the promise's ultimate value if the promise fulfills, or handles the
-ultimate error.
-
-It will cause a fatal error if either `$onFulfilled` or `$onRejected` throw or
-return a rejected promise.
-
-Since the purpose of `done()` is consumption rather than transformation,
-`done()` always returns `null`.
-
-#### See also
-
-* [PromiseInterface::then()](#promiseinterfacethen)
-* [done() vs. then()](#done-vs-then)
-
-#### ExtendedPromiseInterface::otherwise()
-
-```php
-$promise->otherwise(callable $onRejected);
-```
-
-Registers a rejection handler for promise. It is a shortcut for:
-
-```php
-$promise->then(null, $onRejected);
-```
-
-Additionally, you can type hint the `$reason` argument of `$onRejected` to catch
-only specific errors.
-
-```php
-$promise
-    ->otherwise(function (\RuntimeException $reason) {
-        // Only catch \RuntimeException instances
-        // All other types of errors will propagate automatically
-    })
-    ->otherwise(function ($reason) {
-        // Catch other errors
-    )};
-```
-
-#### ExtendedPromiseInterface::always()
-
-```php
-$newPromise = $promise->always(callable $onFulfilledOrRejected);
-```
-
-Allows you to execute "cleanup" type tasks in a promise chain.
-
-It arranges for `$onFulfilledOrRejected` to be called, with no arguments,
-when the promise is either fulfilled or rejected.
-
-* If `$promise` fulfills, and `$onFulfilledOrRejected` returns successfully,
-  `$newPromise` will fulfill with the same value as `$promise`.
-* If `$promise` fulfills, and `$onFulfilledOrRejected` throws or returns a
-  rejected promise, `$newPromise` will reject with the thrown exception or
-  rejected promise's reason.
-* If `$promise` rejects, and `$onFulfilledOrRejected` returns successfully,
-  `$newPromise` will reject with the same reason as `$promise`.
-* If `$promise` rejects, and `$onFulfilledOrRejected` throws or returns a
-  rejected promise, `$newPromise` will reject with the thrown exception or
-  rejected promise's reason.
-
-`always()` behaves similarly to the synchronous finally statement. When combined
-with `otherwise()`, `always()` allows you to write code that is similar to the familiar
-synchronous catch/finally pair.
-
-Consider the following synchronous code:
-
-```php
-try {
-  return doSomething();
-} catch(\Exception $e) {
-    return handleError($e);
-} finally {
-    cleanup();
-}
-```
-
-Similar asynchronous code (with `doSomething()` that returns a promise) can be
-written:
-
-```php
-return doSomething()
-    ->otherwise('handleError')
-    ->always('cleanup');
-```
-
-### CancellablePromiseInterface
-
-A cancellable promise provides a mechanism for consumers to notify the creator
-of the promise that they are not longer interested in the result of an
-operation.
-
-#### CancellablePromiseInterface::cancel()
-
-``` php
-$promise->cancel();
-```
-
-The `cancel()` method notifies the creator of the promise that there is no
-further interest in the results of the operation.
-
-Once a promise is settled (either fulfilled or rejected), calling `cancel()` on
-a promise has no effect.
-
-#### Implementations
-
-* [Promise](#promise-1)
-* [FulfilledPromise](#fulfilledpromise)
-* [RejectedPromise](#rejectedpromise)
-* [LazyPromise](#lazypromise)
+API
+---
 
 ### Promise
 
-Creates a promise whose state is controlled by the functions passed to
-`$resolver`.
+The `Promise` class uses two callback functions, a resolver in which the computation takes place and a canceller which is called when the promise can't be fulfilled. 
+Each of these functions in turn, uses also two callback functions (in the example below `$resolve` and `$reject`).
+These functions can be called by the user on a successfuly or an unsuccesful operation. A promise can use the `then` method to react on a successful or a rejected promise.
 
 ```php
 $resolver = function (callable $resolve, callable $reject) {
     // Do some work, possibly asynchronously, and then
     // resolve or reject.
-
     $resolve($awesomeResult);
     // or $resolve($anotherPromise);
     // or $reject($nastyError);
@@ -348,10 +173,20 @@ $canceller = function (callable $resolve, callable $reject) {
 };
 
 $promise = new React\Promise\Promise($resolver, $canceller);
+
+// this is called if the resolve or reject function is called
+$promise->then(
+    function($result){
+        // Do something with this result,
+    },
+    function() {
+        // Do something on an aborted promise
+    }
+);
 ```
 
 The promise constructor receives a resolver function and an optional canceller
-function which both will be called with 3 arguments:
+function which both will be called with 2 (the 3rd is depracted and not supported in version x.x.x) arguments:
 
   * `$resolve($value)` - Primary function that seals the fate of the
     returned promise. Accepts either a non-promise value, or another promise.
@@ -535,6 +370,195 @@ Traditional reduce function, similar to `array_reduce()`, but input may contain
 promises and/or values, and `$reduceFunc` may return either a value or a
 promise, *and* `$initialValue` may be a promise or a value for the starting
 value.
+
+### Deferred
+
+A deferred represents an operation whose resolution is pending. It has separate
+promise and resolver parts.
+
+```php
+$deferred = new React\Promise\Deferred();
+
+$promise = $deferred->promise();
+
+$deferred->resolve(mixed $value = null);
+$deferred->reject(mixed $reason = null);
+```
+
+The `promise` method returns the promise of the deferred.
+
+The `resolve` and `reject` methods control the state of the deferred.
+
+The constructor of the `Deferred` accepts an optional `$canceller` argument.
+See [Promise](#promise-1) for more information.
+
+#### Deferred::promise()
+
+```php
+$promise = $deferred->promise();
+```
+
+Returns the promise of the deferred, which you can hand out to others while
+keeping the authority to modify its state to yourself.
+
+#### Deferred::resolve()
+
+```php
+$deferred->resolve(mixed $value = null);
+```
+
+Resolves the promise returned by `promise()`. All consumers are notified by
+having `$onFulfilled` (which they registered via `$promise->then()`) called with
+`$value`.
+
+If `$value` itself is a promise, the promise will transition to the state of
+this promise once it is resolved.
+
+#### Deferred::reject()
+
+```php
+$deferred->reject(mixed $reason = null);
+```
+
+Rejects the promise returned by `promise()`, signalling that the deferred's
+computation failed.
+All consumers are notified by having `$onRejected` (which they registered via
+`$promise->then()`) called with `$reason`.
+
+If `$reason` itself is a promise, the promise will be rejected with the outcome
+of this promise regardless whether it fulfills or rejects.
+
+### ExtendedPromiseInterface
+
+The ExtendedPromiseInterface extends the PromiseInterface with useful shortcut
+and utility methods which are not part of the Promises/A specification.
+
+#### Implementations
+
+* [Promise](#promise-1)
+* [FulfilledPromise](#fulfilledpromise)
+* [RejectedPromise](#rejectedpromise)
+* [LazyPromise](#lazypromise)
+
+#### ExtendedPromiseInterface::done()
+
+```php
+$promise->done(callable $onFulfilled = null, callable $onRejected = null);
+```
+
+Consumes the promise's ultimate value if the promise fulfills, or handles the
+ultimate error.
+
+It will cause a fatal error if either `$onFulfilled` or `$onRejected` throw or
+return a rejected promise.
+
+Since the purpose of `done()` is consumption rather than transformation,
+`done()` always returns `null`.
+
+#### See also
+
+* [PromiseInterface::then()](#promiseinterfacethen)
+* [done() vs. then()](#done-vs-then)
+
+#### ExtendedPromiseInterface::otherwise()
+
+```php
+$promise->otherwise(callable $onRejected);
+```
+
+Registers a rejection handler for promise. It is a shortcut for:
+
+```php
+$promise->then(null, $onRejected);
+```
+
+Additionally, you can type hint the `$reason` argument of `$onRejected` to catch
+only specific errors.
+
+```php
+$promise
+    ->otherwise(function (\RuntimeException $reason) {
+        // Only catch \RuntimeException instances
+        // All other types of errors will propagate automatically
+    })
+    ->otherwise(function ($reason) {
+        // Catch other errors
+    )};
+```
+
+#### ExtendedPromiseInterface::always()
+
+```php
+$newPromise = $promise->always(callable $onFulfilledOrRejected);
+```
+
+Allows you to execute "cleanup" type tasks in a promise chain.
+
+It arranges for `$onFulfilledOrRejected` to be called, with no arguments,
+when the promise is either fulfilled or rejected.
+
+* If `$promise` fulfills, and `$onFulfilledOrRejected` returns successfully,
+  `$newPromise` will fulfill with the same value as `$promise`.
+* If `$promise` fulfills, and `$onFulfilledOrRejected` throws or returns a
+  rejected promise, `$newPromise` will reject with the thrown exception or
+  rejected promise's reason.
+* If `$promise` rejects, and `$onFulfilledOrRejected` returns successfully,
+  `$newPromise` will reject with the same reason as `$promise`.
+* If `$promise` rejects, and `$onFulfilledOrRejected` throws or returns a
+  rejected promise, `$newPromise` will reject with the thrown exception or
+  rejected promise's reason.
+
+`always()` behaves similarly to the synchronous finally statement. When combined
+with `otherwise()`, `always()` allows you to write code that is similar to the familiar
+synchronous catch/finally pair.
+
+Consider the following synchronous code:
+
+```php
+try {
+  return doSomething();
+} catch(\Exception $e) {
+    return handleError($e);
+} finally {
+    cleanup();
+}
+```
+
+Similar asynchronous code (with `doSomething()` that returns a promise) can be
+written:
+
+```php
+return doSomething()
+    ->otherwise('handleError')
+    ->always('cleanup');
+```
+
+### CancellablePromiseInterface
+
+A cancellable promise provides a mechanism for consumers to notify the creator
+of the promise that they are not longer interested in the result of an
+operation.
+
+#### CancellablePromiseInterface::cancel()
+
+``` php
+$promise->cancel();
+```
+
+The `cancel()` method notifies the creator of the promise that there is no
+further interest in the results of the operation.
+
+Once a promise is settled (either fulfilled or rejected), calling `cancel()` on
+a promise has no effect.
+
+#### Implementations
+
+* [Promise](#promise-1)
+* [FulfilledPromise](#fulfilledpromise)
+* [RejectedPromise](#rejectedpromise)
+* [LazyPromise](#lazypromise)
+
+
 
 ### PromisorInterface
 
