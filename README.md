@@ -20,31 +20,31 @@ Table of Contents
    * [Promise](#promise)
 3. [API](#api)
    * [Promise](#promise-1)
-   * [FulfilledPromise](#fulfilledpromise)
-   * [RejectedPromise](#rejectedpromise)
-   * [LazyPromise](#lazypromise)
-   * [Functions](#functions)
-     * [resolve()](#resolve)
-     * [reject()](#reject)
-     * [all()](#all)
-     * [race()](#race)
-     * [any()](#any)
-     * [some()](#some)
-     * [map()](#map)
-     * [reduce()](#reduce)
-   * [PromisorInterface](#promisorinterface)
+     * [FulfilledPromise](#fulfilledpromise)
+     * [RejectedPromise](#rejectedpromise)
+     * [LazyPromise](#lazypromise)
+     * [Functions](#functions)
+       * [resolve()](#resolve)
+       * [reject()](#reject)
+       * [all()](#all)
+       * [race()](#race)
+       * [any()](#any)
+       * [some()](#some)
+       * [map()](#map)
+       * [reduce()](#reduce)
+     * [PromisorInterface](#promisorinterface)
    * [Deferred](#deferred-1)
      * [Deferred::promise()](#deferredpromise)
      * [Deferred::resolve()](#deferredresolve)
      * [Deferred::reject()](#deferredreject)
-   * [PromiseInterface](#promiseinterface)
-     * [PromiseInterface::then()](#promiseinterfacethen)
-   * [ExtendedPromiseInterface](#extendedpromiseinterface)
-        * [ExtendedPromiseInterface::done()](#extendedpromiseinterfacedone)
-        * [ExtendedPromiseInterface::otherwise()](#extendedpromiseinterfaceotherwise)
-        * [ExtendedPromiseInterface::always()](#extendedpromiseinterfacealways)
-   * [CancellablePromiseInterface](#cancellablepromiseinterface)
-        * [CancellablePromiseInterface::cancel()](#cancellablepromiseinterfacecancel)
+     * [PromiseInterface](#promiseinterface)
+       * [PromiseInterface::then()](#promiseinterfacethen)
+     * [ExtendedPromiseInterface](#extendedpromiseinterface)
+       * [ExtendedPromiseInterface::done()](#extendedpromiseinterfacedone)
+       * [ExtendedPromiseInterface::otherwise()](#extendedpromiseinterfaceotherwise)
+       * [ExtendedPromiseInterface::always()](#extendedpromiseinterfacealways)
+     * [CancellablePromiseInterface](#cancellablepromiseinterface)
+       * [CancellablePromiseInterface::cancel()](#cancellablepromiseinterfacecancel)
 4. [Examples](#examples)
    * [How to use Deferred](#how-to-use-deferred)
    * [How promise forwarding works](#how-promise-forwarding-works)
@@ -125,7 +125,7 @@ with that thrown exception as the rejection reason.
 The resolver function will be called immediately, the canceller function only
 once all consumers called the `cancel()` method of the promise.
 
-### FulfilledPromise
+#### FulfilledPromise
 
 Creates a already fulfilled promise.
 
@@ -136,7 +136,7 @@ $promise = React\Promise\FulfilledPromise($value);
 Note, that `$value` **cannot** be a promise. It's recommended to use
 [resolve()](#resolve) for creating resolved promises.
 
-### RejectedPromise
+#### RejectedPromise
 
 Creates a already rejected promise.
 
@@ -147,7 +147,7 @@ $promise = React\Promise\RejectedPromise($reason);
 Note, that `$reason` **cannot** be a promise. It's recommended to use
 [reject()](#reject) for creating rejected promises.
 
-### LazyPromise
+#### LazyPromise
 
 Creates a promise which will be lazily initialized by `$factory` once a consumer
 calls the `then()` method.
@@ -168,7 +168,7 @@ $promise->then(function ($value) {
 });
 ```
 
-### Functions
+#### Functions
 
 Useful functions for creating, joining, mapping and reducing collections of
 promises.
@@ -178,7 +178,7 @@ etc.) support cancellation. This means, if you call `cancel()` on the returned
 promise, all promises in the collection are cancelled. If the collection itself
 is a promise which resolves to an array, this promise is also cancelled.
 
-#### resolve()
+##### resolve()
 
 ```php
 $promise = React\Promise\resolve(mixed $promiseOrValue);
@@ -199,7 +199,7 @@ Note: The promise returned is always a promise implementing
 promise which only implements [PromiseInterface](#promiseinterface), this
 promise will be assimilated to a extended promise following `$promiseOrValue`.
 
-#### reject()
+##### reject()
 
 ```php
 $promise = React\Promise\reject(mixed $promiseOrValue);
@@ -217,7 +217,7 @@ This can be useful in situations where you need to reject a promise without
 throwing an exception. For example, it allows you to propagate a rejection with
 the value of another promise.
 
-#### all()
+##### all()
 
 ```php
 $promise = React\Promise\all(array|React\Promise\PromiseInterface $promisesOrValues);
@@ -228,7 +228,7 @@ Returns a promise that will resolve only once all the items in
 will be an array containing the resolution values of each of the items in
 `$promisesOrValues`.
 
-#### race()
+##### race()
 
 ```php
 $promise = React\Promise\race(array|React\Promise\PromiseInterface $promisesOrValues);
@@ -237,7 +237,7 @@ $promise = React\Promise\race(array|React\Promise\PromiseInterface $promisesOrVa
 Initiates a competitive race that allows one winner. Returns a promise which is
 resolved in the same way the first settled promise resolves.
 
-#### any()
+##### any()
 
 ```php
 $promise = React\Promise\any(array|React\Promise\PromiseInterface $promisesOrValues);
@@ -253,7 +253,7 @@ rejected. The rejection value will be an array of all rejection reasons.
 The returned promise will also reject with a `React\Promise\Exception\LengthException`
 if `$promisesOrValues` contains 0 items.
 
-#### some()
+##### some()
 
 ```php
 $promise = React\Promise\some(array|React\Promise\PromiseInterface $promisesOrValues, integer $howMany);
@@ -272,7 +272,7 @@ reject). The rejection value will be an array of
 The returned promise will also reject with a `React\Promise\Exception\LengthException`
 if `$promisesOrValues` contains less items than `$howMany`.
 
-#### map()
+##### map()
 
 ```php
 $promise = React\Promise\map(array|React\Promise\PromiseInterface $promisesOrValues, callable $mapFunc);
@@ -284,7 +284,7 @@ promises and/or values, and `$mapFunc` may return either a value or a promise.
 The map function receives each item as argument, where item is a fully resolved
 value of a promise or value in `$promisesOrValues`.
 
-#### reduce()
+##### reduce()
 
 ```php
 $promise = React\Promise\reduce(array|React\Promise\PromiseInterface $promisesOrValues, callable $reduceFunc , $initialValue = null);
@@ -295,7 +295,7 @@ promises and/or values, and `$reduceFunc` may return either a value or a
 promise, *and* `$initialValue` may be a promise or a value for the starting
 value.
 
-### PromisorInterface
+#### PromisorInterface
 
 The `React\Promise\PromisorInterface` provides a common interface for objects
 that provide a promise. `React\Promise\Deferred` implements it, but since it
@@ -358,7 +358,7 @@ All consumers are notified by having `$onRejected` (which they registered via
 If `$reason` itself is a promise, the promise will be rejected with the outcome
 of this promise regardless whether it fulfills or rejects.
 
-### PromiseInterface
+#### PromiseInterface
 
 The promise interface provides the common interface for all promise
 implementations.
@@ -369,14 +369,14 @@ and an associated value, or rejection (failure) and an associated reason.
 Once in the fulfilled or rejected state, a promise becomes immutable.
 Neither its state nor its result (or error) can be modified.
 
-#### Implementations
+##### Implementations
 
 * [Promise](#promise-1)
 * [FulfilledPromise](#fulfilledpromise)
 * [RejectedPromise](#rejectedpromise)
 * [LazyPromise](#lazypromise)
 
-#### PromiseInterface::then()
+##### PromiseInterface::then()
 
 ```php
 $transformedPromise = $promise->then(callable $onFulfilled = null, callable $onRejected = null);
@@ -405,26 +405,26 @@ the same call to `then()`:
   2. `$onFulfilled` and `$onRejected` will never be called more
      than once.
 
-#### See also
+##### See also
 
 * [resolve()](#resolve) - Creating a resolved promise
 * [reject()](#reject) - Creating a rejected promise
 * [ExtendedPromiseInterface::done()](#extendedpromiseinterfacedone)
 * [done() vs. then()](#done-vs-then)
 
-### ExtendedPromiseInterface
+#### ExtendedPromiseInterface
 
 The ExtendedPromiseInterface extends the PromiseInterface with useful shortcut
 and utility methods which are not part of the Promises/A specification.
 
-#### Implementations
+##### Implementations
 
 * [Promise](#promise-1)
 * [FulfilledPromise](#fulfilledpromise)
 * [RejectedPromise](#rejectedpromise)
 * [LazyPromise](#lazypromise)
 
-#### ExtendedPromiseInterface::done()
+##### ExtendedPromiseInterface::done()
 
 ```php
 $promise->done(callable $onFulfilled = null, callable $onRejected = null);
