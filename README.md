@@ -72,9 +72,8 @@ Concepts
 
 ### Promise
 
-While a deferred represents the computation itself, a **Promise** represents
-the result of that computation. Thus, each deferred has a promise that acts as
-a placeholder for its actual result.
+A **Promise** represents the future result of a computation. Every promise is a
+placeholder for a future result.
 
 ### Deferred
 
@@ -88,7 +87,11 @@ API
 ### Promise
 
 Creates a promise whose state is controlled by the functions passed to
-`$resolver`.
+`$resolver`. The `$resolver` is a callback function using two callback functions
+to `resolve` and `reject` the started computation. The first parameter can be used
+to resolve the result of a successful computation. The second parameter is a callback
+function which can be called when the result should be rejected. A rejected result can
+be e.g. an errornous computation.
 
 ```php
 $resolver = function (callable $resolve, callable $reject) {
@@ -110,7 +113,7 @@ $promise = new React\Promise\Promise($resolver, $canceller);
 ```
 
 The promise constructor receives a resolver function and an optional canceller
-function which both will be called with 3 arguments:
+function which both will be called with 2 arguments:
 
   * `$resolve($value)` - Primary function that seals the fate of the
     returned promise. Accepts either a non-promise value, or another promise.
