@@ -19,18 +19,6 @@ Table of Contents
    * [Deferred](#deferred)
    * [Promise](#promise)
 3. [API](#api)
-   * [Deferred](#deferred-1)
-     * [Deferred::promise()](#deferredpromise)
-     * [Deferred::resolve()](#deferredresolve)
-     * [Deferred::reject()](#deferredreject)
-   * [PromiseInterface](#promiseinterface)
-     * [PromiseInterface::then()](#promiseinterfacethen)
-   * [ExtendedPromiseInterface](#extendedpromiseinterface)
-        * [ExtendedPromiseInterface::done()](#extendedpromiseinterfacedone)
-        * [ExtendedPromiseInterface::otherwise()](#extendedpromiseinterfaceotherwise)
-        * [ExtendedPromiseInterface::always()](#extendedpromiseinterfacealways)
-   * [CancellablePromiseInterface](#cancellablepromiseinterface)
-        * [CancellablePromiseInterface::cancel()](#cancellablepromiseinterfacecancel)
    * [Promise](#promise-1)
    * [FulfilledPromise](#fulfilledpromise)
    * [RejectedPromise](#rejectedpromise)
@@ -45,6 +33,18 @@ Table of Contents
      * [map()](#map)
      * [reduce()](#reduce)
    * [PromisorInterface](#promisorinterface)
+   * [Deferred](#deferred-1)
+     * [Deferred::promise()](#deferredpromise)
+     * [Deferred::resolve()](#deferredresolve)
+     * [Deferred::reject()](#deferredreject)
+   * [PromiseInterface](#promiseinterface)
+     * [PromiseInterface::then()](#promiseinterfacethen)
+   * [ExtendedPromiseInterface](#extendedpromiseinterface)
+        * [ExtendedPromiseInterface::done()](#extendedpromiseinterfacedone)
+        * [ExtendedPromiseInterface::otherwise()](#extendedpromiseinterfaceotherwise)
+        * [ExtendedPromiseInterface::always()](#extendedpromiseinterfacealways)
+   * [CancellablePromiseInterface](#cancellablepromiseinterface)
+        * [CancellablePromiseInterface::cancel()](#cancellablepromiseinterfacecancel)
 4. [Examples](#examples)
    * [How to use Deferred](#how-to-use-deferred)
    * [How promise forwarding works](#how-promise-forwarding-works)
@@ -70,20 +70,236 @@ If you've never heard about promises before,
 Concepts
 --------
 
-### Deferred
-
-A **Deferred** represents a computation or unit of work that may not have
-completed yet. Typically (but not always), that computation will be something
-that executes asynchronously and completes at some point in the future.
-
 ### Promise
 
 While a deferred represents the computation itself, a **Promise** represents
 the result of that computation. Thus, each deferred has a promise that acts as
 a placeholder for its actual result.
 
+### Deferred
+
+A **Deferred** represents a computation or unit of work that may not have
+completed yet. Typically (but not always), that computation will be something
+that executes asynchronously and completes at some point in the future.
+
 API
 ---
+
+### Promise
+
+Creates a promise whose state is controlled by the functions passed to
+`$resolver`.
+
+```php
+$resolver = function (callable $resolve, callable $reject) {
+    // Do some work, possibly asynchronously, and then
+    // resolve or reject.
+
+    $resolve($awesomeResult);
+    // or $resolve($anotherPromise);
+    // or $reject($nastyError);
+};
+
+$canceller = function (callable $resolve, callable $reject) {
+    // Cancel/abort any running operations like network connections, streams etc.
+
+    $reject(new \Exception('Promise cancelled'));
+};
+
+$promise = new React\Promise\Promise($resolver, $canceller);
+```
+
+The promise constructor receives a resolver function and an optional canceller
+function which both will be called with 3 arguments:
+
+  * `$resolve($value)` - Primary function that seals the fate of the
+    returned promise. Accepts either a non-promise value, or another promise.
+    When called with a non-promise value, fulfills promise with that value.
+    When called with another promise, e.g. `$resolve($otherPromise)`, promise's
+    fate will be equivalent to that of `$otherPromise`.
+  * `$reject($reason)` - Function that rejects the promise.
+
+If the resolver or canceller throw an exception, the promise will be rejected
+with that thrown exception as the rejection reason.
+
+The resolver function will be called immediately, the canceller function only
+once all consumers called the `cancel()` method of the promise.
+
+### FulfilledPromise
+
+Creates a already fulfilled promise.
+
+```php
+$promise = React\Promise\FulfilledPromise($value);
+```
+
+Note, that `$value` **cannot** be a promise. It's recommended to use
+[resolve()](#resolve) for creating resolved promises.
+
+### RejectedPromise
+
+Creates a already rejected promise.
+
+```php
+$promise = React\Promise\RejectedPromise($reason);
+```
+
+Note, that `$reason` **cannot** be a promise. It's recommended to use
+[reject()](#reject) for creating rejected promises.
+
+### LazyPromise
+
+Creates a promise which will be lazily initialized by `$factory` once a consumer
+calls the `then()` method.
+
+```php
+$factory = function () {
+    $deferred = new React\Promise\Deferred();
+
+    // Do some heavy stuff here and resolve the deferred once completed
+
+    return $deferred->promise();
+};
+
+$promise = React\Promise\LazyPromise($factory);
+
+// $factory will only be executed once we call then()
+$promise->then(function ($value) {
+});
+```
+
+### Functions
+
+Useful functions for creating, joining, mapping and reducing collections of
+promises.
+
+All functions working on promise collections (like `all()`, `race()`, `some()`
+etc.) support cancellation. This means, if you call `cancel()` on the returned
+promise, all promises in the collection are cancelled. If the collection itself
+is a promise which resolves to an array, this promise is also cancelled.
+
+#### resolve()
+
+```php
+$promise = React\Promise\resolve(mixed $promiseOrValue);
+```
+
+Creates a promise for the supplied `$promiseOrValue`.
+
+If `$promiseOrValue` is a value, it will be the resolution value of the
+returned promise.
+
+If `$promiseOrValue` is a thenable (any object that provides a `then()` method),
+a trusted promise that follows the state of the thenable is returned.
+
+If `$promiseOrValue` is a promise, it will be returned as is.
+
+Note: The promise returned is always a promise implementing
+[ExtendedPromiseInterface](#extendedpromiseinterface). If you pass in a custom
+promise which only implements [PromiseInterface](#promiseinterface), this
+promise will be assimilated to a extended promise following `$promiseOrValue`.
+
+#### reject()
+
+```php
+$promise = React\Promise\reject(mixed $promiseOrValue);
+```
+
+Creates a rejected promise for the supplied `$promiseOrValue`.
+
+If `$promiseOrValue` is a value, it will be the rejection value of the
+returned promise.
+
+If `$promiseOrValue` is a promise, its completion value will be the rejected
+value of the returned promise.
+
+This can be useful in situations where you need to reject a promise without
+throwing an exception. For example, it allows you to propagate a rejection with
+the value of another promise.
+
+#### all()
+
+```php
+$promise = React\Promise\all(array|React\Promise\PromiseInterface $promisesOrValues);
+```
+
+Returns a promise that will resolve only once all the items in
+`$promisesOrValues` have resolved. The resolution value of the returned promise
+will be an array containing the resolution values of each of the items in
+`$promisesOrValues`.
+
+#### race()
+
+```php
+$promise = React\Promise\race(array|React\Promise\PromiseInterface $promisesOrValues);
+```
+
+Initiates a competitive race that allows one winner. Returns a promise which is
+resolved in the same way the first settled promise resolves.
+
+#### any()
+
+```php
+$promise = React\Promise\any(array|React\Promise\PromiseInterface $promisesOrValues);
+```
+
+Returns a promise that will resolve when any one of the items in
+`$promisesOrValues` resolves. The resolution value of the returned promise
+will be the resolution value of the triggering item.
+
+The returned promise will only reject if *all* items in `$promisesOrValues` are
+rejected. The rejection value will be an array of all rejection reasons.
+
+The returned promise will also reject with a `React\Promise\Exception\LengthException`
+if `$promisesOrValues` contains 0 items.
+
+#### some()
+
+```php
+$promise = React\Promise\some(array|React\Promise\PromiseInterface $promisesOrValues, integer $howMany);
+```
+
+Returns a promise that will resolve when `$howMany` of the supplied items in
+`$promisesOrValues` resolve. The resolution value of the returned promise
+will be an array of length `$howMany` containing the resolution values of the
+triggering items.
+
+The returned promise will reject if it becomes impossible for `$howMany` items
+to resolve (that is, when `(count($promisesOrValues) - $howMany) + 1` items
+reject). The rejection value will be an array of
+`(count($promisesOrValues) - $howMany) + 1` rejection reasons.
+
+The returned promise will also reject with a `React\Promise\Exception\LengthException`
+if `$promisesOrValues` contains less items than `$howMany`.
+
+#### map()
+
+```php
+$promise = React\Promise\map(array|React\Promise\PromiseInterface $promisesOrValues, callable $mapFunc);
+```
+
+Traditional map function, similar to `array_map()`, but allows input to contain
+promises and/or values, and `$mapFunc` may return either a value or a promise.
+
+The map function receives each item as argument, where item is a fully resolved
+value of a promise or value in `$promisesOrValues`.
+
+#### reduce()
+
+```php
+$promise = React\Promise\reduce(array|React\Promise\PromiseInterface $promisesOrValues, callable $reduceFunc , $initialValue = null);
+```
+
+Traditional reduce function, similar to `array_reduce()`, but input may contain
+promises and/or values, and `$reduceFunc` may return either a value or a
+promise, *and* `$initialValue` may be a promise or a value for the starting
+value.
+
+### PromisorInterface
+
+The `React\Promise\PromisorInterface` provides a common interface for objects
+that provide a promise. `React\Promise\Deferred` implements it, but since it
+is part of the public API anyone can implement it.
 
 ### Deferred
 
@@ -325,222 +541,6 @@ a promise has no effect.
 * [FulfilledPromise](#fulfilledpromise)
 * [RejectedPromise](#rejectedpromise)
 * [LazyPromise](#lazypromise)
-
-### Promise
-
-Creates a promise whose state is controlled by the functions passed to
-`$resolver`.
-
-```php
-$resolver = function (callable $resolve, callable $reject) {
-    // Do some work, possibly asynchronously, and then
-    // resolve or reject.
-
-    $resolve($awesomeResult);
-    // or $resolve($anotherPromise);
-    // or $reject($nastyError);
-};
-
-$canceller = function (callable $resolve, callable $reject) {
-    // Cancel/abort any running operations like network connections, streams etc.
-
-    $reject(new \Exception('Promise cancelled'));
-};
-
-$promise = new React\Promise\Promise($resolver, $canceller);
-```
-
-The promise constructor receives a resolver function and an optional canceller
-function which both will be called with 3 arguments:
-
-  * `$resolve($value)` - Primary function that seals the fate of the
-    returned promise. Accepts either a non-promise value, or another promise.
-    When called with a non-promise value, fulfills promise with that value.
-    When called with another promise, e.g. `$resolve($otherPromise)`, promise's
-    fate will be equivalent to that of `$otherPromise`.
-  * `$reject($reason)` - Function that rejects the promise.
-
-If the resolver or canceller throw an exception, the promise will be rejected
-with that thrown exception as the rejection reason.
-
-The resolver function will be called immediately, the canceller function only
-once all consumers called the `cancel()` method of the promise.
-
-### FulfilledPromise
-
-Creates a already fulfilled promise.
-
-```php
-$promise = React\Promise\FulfilledPromise($value);
-```
-
-Note, that `$value` **cannot** be a promise. It's recommended to use
-[resolve()](#resolve) for creating resolved promises.
-
-### RejectedPromise
-
-Creates a already rejected promise.
-
-```php
-$promise = React\Promise\RejectedPromise($reason);
-```
-
-Note, that `$reason` **cannot** be a promise. It's recommended to use
-[reject()](#reject) for creating rejected promises.
-
-### LazyPromise
-
-Creates a promise which will be lazily initialized by `$factory` once a consumer
-calls the `then()` method.
-
-```php
-$factory = function () {
-    $deferred = new React\Promise\Deferred();
-
-    // Do some heavy stuff here and resolve the deferred once completed
-
-    return $deferred->promise();
-};
-
-$promise = React\Promise\LazyPromise($factory);
-
-// $factory will only be executed once we call then()
-$promise->then(function ($value) {
-});
-```
-
-### Functions
-
-Useful functions for creating, joining, mapping and reducing collections of
-promises.
-
-All functions working on promise collections (like `all()`, `race()`, `some()`
-etc.) support cancellation. This means, if you call `cancel()` on the returned
-promise, all promises in the collection are cancelled. If the collection itself
-is a promise which resolves to an array, this promise is also cancelled.
-
-#### resolve()
-
-```php
-$promise = React\Promise\resolve(mixed $promiseOrValue);
-```
-
-Creates a promise for the supplied `$promiseOrValue`.
-
-If `$promiseOrValue` is a value, it will be the resolution value of the
-returned promise.
-
-If `$promiseOrValue` is a thenable (any object that provides a `then()` method),
-a trusted promise that follows the state of the thenable is returned.
-
-If `$promiseOrValue` is a promise, it will be returned as is.
-
-Note: The promise returned is always a promise implementing
-[ExtendedPromiseInterface](#extendedpromiseinterface). If you pass in a custom
-promise which only implements [PromiseInterface](#promiseinterface), this
-promise will be assimilated to a extended promise following `$promiseOrValue`.
-
-#### reject()
-
-```php
-$promise = React\Promise\reject(mixed $promiseOrValue);
-```
-
-Creates a rejected promise for the supplied `$promiseOrValue`.
-
-If `$promiseOrValue` is a value, it will be the rejection value of the
-returned promise.
-
-If `$promiseOrValue` is a promise, its completion value will be the rejected
-value of the returned promise.
-
-This can be useful in situations where you need to reject a promise without
-throwing an exception. For example, it allows you to propagate a rejection with
-the value of another promise.
-
-#### all()
-
-```php
-$promise = React\Promise\all(array|React\Promise\PromiseInterface $promisesOrValues);
-```
-
-Returns a promise that will resolve only once all the items in
-`$promisesOrValues` have resolved. The resolution value of the returned promise
-will be an array containing the resolution values of each of the items in
-`$promisesOrValues`.
-
-#### race()
-
-```php
-$promise = React\Promise\race(array|React\Promise\PromiseInterface $promisesOrValues);
-```
-
-Initiates a competitive race that allows one winner. Returns a promise which is
-resolved in the same way the first settled promise resolves.
-
-#### any()
-
-```php
-$promise = React\Promise\any(array|React\Promise\PromiseInterface $promisesOrValues);
-```
-
-Returns a promise that will resolve when any one of the items in
-`$promisesOrValues` resolves. The resolution value of the returned promise
-will be the resolution value of the triggering item.
-
-The returned promise will only reject if *all* items in `$promisesOrValues` are
-rejected. The rejection value will be an array of all rejection reasons.
-
-The returned promise will also reject with a `React\Promise\Exception\LengthException`
-if `$promisesOrValues` contains 0 items.
-
-#### some()
-
-```php
-$promise = React\Promise\some(array|React\Promise\PromiseInterface $promisesOrValues, integer $howMany);
-```
-
-Returns a promise that will resolve when `$howMany` of the supplied items in
-`$promisesOrValues` resolve. The resolution value of the returned promise
-will be an array of length `$howMany` containing the resolution values of the
-triggering items.
-
-The returned promise will reject if it becomes impossible for `$howMany` items
-to resolve (that is, when `(count($promisesOrValues) - $howMany) + 1` items
-reject). The rejection value will be an array of
-`(count($promisesOrValues) - $howMany) + 1` rejection reasons.
-
-The returned promise will also reject with a `React\Promise\Exception\LengthException`
-if `$promisesOrValues` contains less items than `$howMany`.
-
-#### map()
-
-```php
-$promise = React\Promise\map(array|React\Promise\PromiseInterface $promisesOrValues, callable $mapFunc);
-```
-
-Traditional map function, similar to `array_map()`, but allows input to contain
-promises and/or values, and `$mapFunc` may return either a value or a promise.
-
-The map function receives each item as argument, where item is a fully resolved
-value of a promise or value in `$promisesOrValues`.
-
-#### reduce()
-
-```php
-$promise = React\Promise\reduce(array|React\Promise\PromiseInterface $promisesOrValues, callable $reduceFunc , $initialValue = null);
-```
-
-Traditional reduce function, similar to `array_reduce()`, but input may contain
-promises and/or values, and `$reduceFunc` may return either a value or a
-promise, *and* `$initialValue` may be a promise or a value for the starting
-value.
-
-### PromisorInterface
-
-The `React\Promise\PromisorInterface` provides a common interface for objects
-that provide a promise. `React\Promise\Deferred` implements it, but since it
-is part of the public API anyone can implement it.
 
 Examples
 --------
